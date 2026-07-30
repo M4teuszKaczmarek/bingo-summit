@@ -1,0 +1,51 @@
+# Plik z hasłami do Twojego Bingo Party.
+# - Jedno hasło w jednej linii.
+# - Linie zaczynające się od "#" są ignorowane (to komentarze/instrukcje) - możesz je usunąć.
+# - Im więcej haseł, tym mniej powtórzeń na kartach graczy.
+# - Po edycji tego pliku wystarczy zrobić commit do repozytorium - Azure samo wdroży zmianę.
+#
+# Podmień poniższe przykłady na swoje własne hasła:
+
+Nie zawsze jest niedziela
+U sąsiada trawa jest zawsze zieleńsza
+Tracimy pieniądze
+Premii na koniec roku nie będzie
+"Ergo" Wojtka
+stawki dyżurowe
+nie mamy 100 pracowników, ale nieosiąganie celów jest okej
+To był trudny rok
+Losowe wspomnienie Marcina Okraski
+moim priorytetem jest aby nie zwalniać ludzi
+Problemy techniczne
+Czy ktoś włączył nagrywanie?
+100 % SLA
+burzenie silosów
+wynagrodzenia są rynkowe
+czelendżowanie Wojtka
+niezalogowany czas to strata
+nierealizowanie strategii na 100 jest ok
+losowa alegoria Wojtka
+CBP mention
+rotacja w organizacji
+nawiązanie do biegania
+firmowa "transparentność"
+duże obłożenie zespołu Cloud
+Pochwała dla Pana Jakuba
+Młodzieżowe słowo z ust Wojtka np "odklejka"
+sprzedaż ruszyła odkąd nie ma Mazeranta
+Tomasz P. ma dużo pomysłów
+Kamil P. najbardziej zaangażowanym pracownikiem
+statek wpłynął znowu na niespokojne wody, ale nie jest to jeszcze stan wojenny
+nie nadążamy za zmieniającym się rynkiem
+Zmiany b2b i prace z prawnikami
+przypierdolka Łukasza do kogoś
+AI ogłupia
+Wojtek i Tomek Piętak mają różne tarcia, ale to dobrze
+Straciliśmy klienta, ale nie pada żaden szczegół jaki to klient
+losowe nawiązanie do gór
+Coś o negatywnej stronie AI
+SLA na poziomie 99% nie jest potrzebne
+Statystyki wykazują że mamy dużo leadów ale małą konwersje
+Przypominam przesłanie - Zdrowie jest najważniejsze. Dbajcie o siebie
+AI to szansa ale i zagrożenie.
+ 

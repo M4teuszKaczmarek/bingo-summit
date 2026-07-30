@@ -144,6 +144,13 @@
     display:inline-block;
   }
   .panel .hint{ color: var(--text-dim); font-size:0.88rem; margin-bottom:16px; }
+  .hint code{
+    background: rgba(255,255,255,0.1);
+    color: var(--focus);
+    padding: 1px 6px;
+    border-radius: 6px;
+    font-size: 0.85em;
+  }
 
   textarea{
     width:100%; min-height:170px;
@@ -413,7 +420,7 @@
   <!-- WIDOK USTAWIEŃ -->
   <section id="setup-view" class="panel">
     <h2>Twoje hasła</h2>
-    <div class="hint">Jedno hasło w jednej linii. Im więcej wpiszesz, tym bardziej losowa będzie każda karta.</div>
+    <div class="hint">Jedno hasło w jednej linii. Im więcej wpiszesz, tym bardziej losowa będzie każda karta. Wskazówka: jeśli w repozytorium obok strony umieścisz plik <code>phrases.txt</code>, aplikacja wczyta hasła z niego automatycznie i pominie ten ekran dla wszystkich odwiedzających — link do wysłania znajomym to wtedy po prostu adres strony.</div>
     <textarea id="phrases-input" placeholder="np.
 Ktoś mówi 'no dobra, ostatnia gra'
 Ktoś się spóźnia
@@ -470,11 +477,11 @@ Ktoś przypala jedzenie
     </div>
   </section>
 
-  <footer>Dane hasła zapisują się tylko w Twojej przeglądarce (localStorage). Link do udostępnienia zawiera listę haseł zakodowaną w adresie — każda osoba, która go otworzy, dostaje własną losową kartę.</footer>
+  <footer id="footer-note">Dane hasła zapisują się tylko w Twojej przeglądarce (localStorage). Link do udostępnienia zawiera listę haseł zakodowaną w adresie — każda osoba, która go otworzy, dostaje własną losową kartę.</footer>
 </div>
 
 <script>
-(function(){
+(async function(){
   const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   /* ---------- floating background balls ---------- */
@@ -521,6 +528,7 @@ Ktoś przypala jedzenie
   const reshuffleBtn = document.getElementById("reshuffle-btn");
   const clearBtn = document.getElementById("clear-btn");
   const editBtn = document.getElementById("edit-btn");
+  const footerNote = document.getElementById("footer-note");
 
   let currentPhrases = [];
   let currentSize = 5;
@@ -853,6 +861,30 @@ Ktoś przypala jedzenie
     return null;
   }
 
+  async function loadPhrasesFile(){
+    try{
+      const resp = await fetch("phrases.txt", { cache: "no-store" });
+      if(!resp.ok) return null;
+      const text = await resp.text();
+      const lines = text
+        .split(/\r?\n/)
+        .map(l => l.trim())
+        .filter(l => l.length > 0 && !l.startsWith("#"));
+      if(!lines.length) return null;
+      return lines;
+    }catch(e){
+      return null;
+    }
+  }
+
+  function simpleHash(str){
+    let h = 0;
+    for(let i = 0; i < str.length; i++){
+      h = (h * 31 + str.charCodeAt(i)) | 0;
+    }
+    return h.toString(36);
+  }
+
   function readHashData(){
     const hash = location.hash;
     let m = hash.match(/[#&]d=([^&]+)/);
@@ -896,7 +928,7 @@ Ktoś przypala jedzenie
   const shared = readHashData();
 
   if(shared){
-    /* ---------- gość: otworzył link od gospodarza ---------- */
+    /* ---------- gość: otworzył stary link ze wspólnymi hasłami ---------- */
     isGuest = true;
     phrasesInput.value = shared.data.p.join("\n");
     sizeSelect.value = String(shared.data.s || 5);
@@ -922,30 +954,59 @@ Ktoś przypala jedzenie
       showGame();
     }
   } else {
-    /* ---------- gospodarz: zwykłe wejście na stronę ---------- */
-    isGuest = false;
-    applyGuestUI();
+    const filePhrases = await loadPhrasesFile();
 
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if(saved){
-      try{
-        const arr = JSON.parse(saved);
-        if(Array.isArray(arr)) phrasesInput.value = arr.join("\n");
-      }catch(e){}
-    }
-    const savedSize = localStorage.getItem(SIZE_KEY);
-    if(savedSize) sizeSelect.value = savedSize;
-    const savedFree = localStorage.getItem(FREE_KEY);
-    if(savedFree !== null) freeSpaceCb.checked = savedFree === "1";
+    if(filePhrases){
+      /* ---------- hasła wczytane z phrases.txt - każdy dostaje własną kartę ---------- */
+      isGuest = true;
+      currentPhrases = filePhrases;
+      currentSize = parseInt(sizeSelect.value, 10) || 5;
+      currentFree = freeSpaceCb.checked;
 
-    currentPhrases = getPhrasesFromTextarea();
-    currentSize = parseInt(sizeSelect.value, 10);
-    currentFree = freeSpaceCb.checked;
+      const fileKey = "file:" + simpleHash(filePhrases.join("\n") + currentSize + (currentFree ? "1" : "0"));
+      const sameFileAsBefore = localStorage.getItem(SHARE_KEY) === fileKey
+        && localStorage.getItem(MODE_KEY) === "file";
 
-    if(localStorage.getItem(MODE_KEY) === "host" && restoreSavedCardIfPossible()){
-      showGame();
+      applyGuestUI();
+      footerNote.textContent = "Hasła wczytane z pliku phrases.txt. Każda osoba, która otworzy tę stronę, dostaje własną losową kartę.";
+
+      if(sameFileAsBefore && restoreSavedCardIfPossible()){
+        showGame();
+      } else {
+        localStorage.setItem(MODE_KEY, "file");
+        localStorage.setItem(SHARE_KEY, fileKey);
+        renderLetters(currentSize);
+        cardWords = buildCard(currentSize, currentFree);
+        renderCard();
+        saveCardState();
+        showGame();
+      }
     } else {
-      showSetup();
+      /* ---------- gospodarz: ręczne wpisywanie haseł w przeglądarce ---------- */
+      isGuest = false;
+      applyGuestUI();
+
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if(saved){
+        try{
+          const arr = JSON.parse(saved);
+          if(Array.isArray(arr)) phrasesInput.value = arr.join("\n");
+        }catch(e){}
+      }
+      const savedSize = localStorage.getItem(SIZE_KEY);
+      if(savedSize) sizeSelect.value = savedSize;
+      const savedFree = localStorage.getItem(FREE_KEY);
+      if(savedFree !== null) freeSpaceCb.checked = savedFree === "1";
+
+      currentPhrases = getPhrasesFromTextarea();
+      currentSize = parseInt(sizeSelect.value, 10);
+      currentFree = freeSpaceCb.checked;
+
+      if(localStorage.getItem(MODE_KEY) === "host" && restoreSavedCardIfPossible()){
+        showGame();
+      } else {
+        showSetup();
+      }
     }
   }
 })();
