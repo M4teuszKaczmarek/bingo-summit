@@ -218,6 +218,13 @@
   }
   .btn-ghost:hover{ border-color: var(--teal); background: rgba(0,224,192,0.08); transform: translateY(-2px); }
 
+  button:disabled{
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: grayscale(0.4);
+  }
+  button:disabled:hover{ transform:none; box-shadow:none; border-color: var(--panel-border); background: rgba(255,255,255,0.06); }
+
   .btn-danger{
     background: transparent;
     color:#ff9fb5;
@@ -420,28 +427,13 @@
   <!-- WIDOK USTAWIEŃ -->
   <section id="setup-view" class="panel">
     <h2>Twoje hasła</h2>
-    <div class="hint">Jedno hasło w jednej linii. Im więcej wpiszesz, tym bardziej losowa będzie każda karta. Wskazówka: jeśli w repozytorium obok strony umieścisz plik <code>phrases.txt</code>, aplikacja wczyta hasła z niego automatycznie i pominie ten ekran dla wszystkich odwiedzających — link do wysłania znajomym to wtedy po prostu adres strony.</div>
+    <div class="hint">Jedno hasło w jednej linii, potrzebujesz ich co najmniej 16 (karta to zawsze 4 × 4, bez wolnego pola). Wskazówka: jeśli w repozytorium obok strony umieścisz plik <code>phrases.txt</code>, aplikacja wczyta hasła z niego automatycznie i pominie ten ekran dla wszystkich odwiedzających — link do wysłania znajomym to wtedy po prostu adres strony.</div>
     <textarea id="phrases-input" placeholder="np.
 Ktoś mówi 'no dobra, ostatnia gra'
 Ktoś się spóźnia
 Pada pytanie 'a kto to wygrywa?'
 Ktoś przypala jedzenie
 ..."></textarea>
-
-    <div class="row">
-      <div class="field">
-        <label for="size-select">Rozmiar karty</label>
-        <select id="size-select">
-          <option value="3">3 × 3</option>
-          <option value="4">4 × 4</option>
-          <option value="5" selected>5 × 5 (klasyczne BINGO)</option>
-        </select>
-      </div>
-      <label class="checkline">
-        <input type="checkbox" id="free-space" checked>
-        Wolne pole na środku
-      </label>
-    </div>
 
     <div id="status-msg"></div>
 
@@ -461,7 +453,7 @@ Ktoś przypala jedzenie
     <div class="board-head">
       <div class="title display">Twoja karta</div>
       <div class="actions">
-        <button class="btn-ghost" id="reshuffle-btn">Nowa karta</button>
+        <button class="btn-ghost" id="reshuffle-btn" disabled title="Karta jest zablokowana - każdy gra na jednym, stałym układzie">Nowa karta</button>
         <button class="btn-ghost" id="clear-btn">Wyczyść</button>
         <button class="btn-danger" id="edit-btn">Edytuj hasła</button>
       </div>
@@ -504,18 +496,17 @@ Ktoś przypala jedzenie
   }
 
   const STORAGE_KEY = "bingo-party-phrases-v1";
-  const SIZE_KEY = "bingo-party-size-v1";
-  const FREE_KEY = "bingo-party-free-v1";
   const CARD_KEY = "bingo-party-card-v1";
   const MARKED_KEY = "bingo-party-marked-v1";
   const MODE_KEY = "bingo-party-mode-v1";
   const SHARE_KEY = "bingo-party-sharehash-v1";
 
+  const CARD_SIZE = 4;
+  const FREE_SPACE = false;
+
   const setupView = document.getElementById("setup-view");
   const gameView = document.getElementById("game-view");
   const phrasesInput = document.getElementById("phrases-input");
-  const sizeSelect = document.getElementById("size-select");
-  const freeSpaceCb = document.getElementById("free-space");
   const statusMsg = document.getElementById("status-msg");
   const generateBtn = document.getElementById("generate-btn");
   const shareBtn = document.getElementById("share-btn");
@@ -531,8 +522,8 @@ Ktoś przypala jedzenie
   const footerNote = document.getElementById("footer-note");
 
   let currentPhrases = [];
-  let currentSize = 5;
-  let currentFree = true;
+  let currentSize = CARD_SIZE;
+  let currentFree = FREE_SPACE;
   let cardWords = [];
   let marked = [];
   let hasWon = false;
@@ -779,8 +770,8 @@ Ktoś przypala jedzenie
 
   function validateAndPrepare(){
     const phrases = getPhrasesFromTextarea();
-    const size = parseInt(sizeSelect.value, 10);
-    const free = freeSpaceCb.checked;
+    const size = CARD_SIZE;
+    const free = FREE_SPACE;
     const need = neededCount(size, free);
 
     statusMsg.textContent = "";
@@ -795,8 +786,6 @@ Ktoś przypala jedzenie
     currentSize = size;
     currentFree = free;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(phrases));
-    localStorage.setItem(SIZE_KEY, String(size));
-    localStorage.setItem(FREE_KEY, free ? "1" : "0");
     return { phrases, size, free };
   }
 
@@ -814,11 +803,8 @@ Ktoś przypala jedzenie
     showGame();
   });
 
-  reshuffleBtn.addEventListener("click", () => {
-    cardWords = buildCard(currentSize, currentFree);
-    renderCard();
-    saveCardState();
-  });
+  // Przycisk "Nowa karta" jest celowo zablokowany (disabled w HTML) -
+  // każdy gracz ma jeden, stały układ karty przez całą grę.
 
   clearBtn.addEventListener("click", () => {
     marked = cardWords.map(w => !!w.isFree);
@@ -931,11 +917,9 @@ Ktoś przypala jedzenie
     /* ---------- gość: otworzył stary link ze wspólnymi hasłami ---------- */
     isGuest = true;
     phrasesInput.value = shared.data.p.join("\n");
-    sizeSelect.value = String(shared.data.s || 5);
-    freeSpaceCb.checked = !!shared.data.f;
     currentPhrases = shared.data.p;
-    currentSize = parseInt(sizeSelect.value, 10);
-    currentFree = freeSpaceCb.checked;
+    currentSize = CARD_SIZE;
+    currentFree = FREE_SPACE;
 
     const sameLinkAsBefore = localStorage.getItem(SHARE_KEY) === shared.raw
       && localStorage.getItem(MODE_KEY) === "guest";
@@ -960,8 +944,8 @@ Ktoś przypala jedzenie
       /* ---------- hasła wczytane z phrases.txt - każdy dostaje własną kartę ---------- */
       isGuest = true;
       currentPhrases = filePhrases;
-      currentSize = parseInt(sizeSelect.value, 10) || 5;
-      currentFree = freeSpaceCb.checked;
+      currentSize = CARD_SIZE;
+      currentFree = FREE_SPACE;
 
       const fileKey = "file:" + simpleHash(filePhrases.join("\n") + currentSize + (currentFree ? "1" : "0"));
       const sameFileAsBefore = localStorage.getItem(SHARE_KEY) === fileKey
@@ -993,14 +977,10 @@ Ktoś przypala jedzenie
           if(Array.isArray(arr)) phrasesInput.value = arr.join("\n");
         }catch(e){}
       }
-      const savedSize = localStorage.getItem(SIZE_KEY);
-      if(savedSize) sizeSelect.value = savedSize;
-      const savedFree = localStorage.getItem(FREE_KEY);
-      if(savedFree !== null) freeSpaceCb.checked = savedFree === "1";
 
       currentPhrases = getPhrasesFromTextarea();
-      currentSize = parseInt(sizeSelect.value, 10);
-      currentFree = freeSpaceCb.checked;
+      currentSize = CARD_SIZE;
+      currentFree = FREE_SPACE;
 
       if(localStorage.getItem(MODE_KEY) === "host" && restoreSavedCardIfPossible()){
         showGame();
