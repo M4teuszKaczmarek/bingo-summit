@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
 <style>
   :root{
     --bg-1: #180a2e;
@@ -540,13 +541,23 @@ Ktoś przypala jedzenie
     editBtn.style.display = isGuest ? "none" : "";
   }
 
-  function b64EncodeUnicode(str){
-    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
-      function(_, p1){ return String.fromCharCode('0x' + p1); }));
+  function encodeShareData(phrases, size, free){
+    // zwarty format: [rozmiar][0/1 wolne pole] + hasła oddzielone znakiem nowej linii,
+    // skompresowany do krótkiego ciągu bezpiecznego dla adresu URL
+    const payload = size + (free ? "1" : "0") + "\n" + phrases.join("\n");
+    return LZString.compressToEncodedURIComponent(payload);
   }
-  function b64DecodeUnicode(str){
-    return decodeURIComponent(Array.prototype.map.call(atob(str),
-      function(c){ return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2); }).join(''));
+
+  function decodeShareData(raw){
+    const payload = LZString.decompressFromEncodedURIComponent(raw);
+    if(!payload) return null;
+    const lines = payload.split("\n");
+    const header = lines[0] || "";
+    const size = parseInt(header[0], 10);
+    const free = header[1] === "1";
+    const phrases = lines.slice(1).filter(s => s.length > 0);
+    if(!phrases.length || !size) return null;
+    return { p: phrases, s: size, f: free };
   }
 
   function getPhrasesFromTextarea(){
@@ -817,9 +828,8 @@ Ktoś przypala jedzenie
   shareBtn.addEventListener("click", () => {
     const prep = validateAndPrepare();
     if(!prep) return;
-    const payload = JSON.stringify({ p: prep.phrases, s: prep.size, f: prep.free ? 1 : 0 });
-    const encoded = b64EncodeUnicode(payload);
-    const url = `${location.origin}${location.pathname}#data=${encoded}`;
+    const encoded = encodeShareData(prep.phrases, prep.size, prep.free);
+    const url = `${location.origin}${location.pathname}#d=${encoded}`;
     shareUrl.value = url;
     shareBox.style.display = "flex";
   });
@@ -833,17 +843,28 @@ Ktoś przypala jedzenie
     }catch(e){}
   });
 
+  function legacyDecode(str){
+    try{
+      const json = decodeURIComponent(Array.prototype.map.call(atob(str),
+        function(c){ return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2); }).join(''));
+      const data = JSON.parse(json);
+      if(Array.isArray(data.p) && data.p.length) return data;
+    }catch(e){}
+    return null;
+  }
+
   function readHashData(){
     const hash = location.hash;
-    const m = hash.match(/data=([^&]+)/);
-    if(!m) return null;
-    try{
-      const decoded = b64DecodeUnicode(decodeURIComponent(m[1]));
-      const data = JSON.parse(decoded);
-      if(Array.isArray(data.p) && data.p.length){
-        return { raw: m[1], data };
-      }
-    }catch(e){ return null; }
+    let m = hash.match(/[#&]d=([^&]+)/);
+    if(m){
+      const data = decodeShareData(decodeURIComponent(m[1]));
+      if(data) return { raw: "d:" + m[1], data };
+    }
+    m = hash.match(/[#&]data=([^&]+)/);
+    if(m){
+      const data = legacyDecode(decodeURIComponent(m[1]));
+      if(data) return { raw: "data:" + m[1], data };
+    }
     return null;
   }
 
