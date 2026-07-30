@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bingo Party — stwórz kartę i graj ze znajomymi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-1: #180a2e;
+    --bg-2: #2c1155;
+    --bg-3: #170c33;
+    --panel: rgba(255,255,255,0.055);
+    --panel-border: rgba(255,255,255,0.14);
+    --panel-strong: rgba(255,255,255,0.09);
+    --pink: #ff3d81;
+    --teal: #00e0c0;
+    --yellow: #ffc93c;
+    --blue: #5c7cfa;
+    --violet: #a06be0;
+    --paper: #fdf8ef;
+    --ink: #2a1245;
+    --ink-dim: #6b5a86;
+    --text: #f3edff;
+    --text-dim: #b9aed9;
+    --focus: var(--yellow);
+    --stamp: #e63e5c;
+  }
+
+  *{box-sizing:border-box;}
+  html{ scroll-behavior:smooth; }
+  body{
+    margin:0;
+    min-height:100vh;
+    color: var(--text);
+    font-family:"Inter", "Segoe UI", sans-serif;
+    background: var(--bg-1);
+    overflow-x:hidden;
+    position:relative;
+  }
+  h1,h2,h3,.display{ font-family:"Baloo 2", "Trebuchet MS", sans-serif; }
+
+  /* ---------- background atmosphere ---------- */
+  .bg-scene{
+    position:fixed; inset:0; z-index:-2; overflow:hidden;
+    background:
+      radial-gradient(1000px 700px at 12% -8%, var(--bg-2) 0%, transparent 60%),
+      radial-gradient(900px 650px at 105% 15%, #3a1361 0%, transparent 55%),
+      radial-gradient(700px 500px at 50% 115%, #200f45 0%, transparent 60%),
+      var(--bg-1);
+  }
+  .float-ball{
+    position:absolute;
+    border-radius:50%;
+    opacity:0.16;
+    filter: blur(1px);
+    animation: drift 22s ease-in-out infinite;
+  }
+  @keyframes drift{
+    0%,100%{ transform: translateY(0) translateX(0) rotate(0deg); }
+    50%{ transform: translateY(-40px) translateX(18px) rotate(20deg); }
+  }
+
+  .wrap{ max-width: 1000px; margin:0 auto; padding: 40px 18px 70px; position:relative; z-index:1; }
+
+  /* ---------- header ---------- */
+  header.hero{ text-align:center; margin-bottom:34px; }
+
+  .drum{
+    position:relative;
+    width: 300px; height:120px;
+    margin: 0 auto 6px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .drum::before{
+    content:"";
+    position:absolute;
+    width:300px; height:300px;
+    top:50%; left:50%;
+    transform: translate(-50%,-58%);
+    border-radius:50%;
+    background: conic-gradient(from 0deg, var(--pink), var(--yellow), var(--teal), var(--blue), var(--violet), var(--pink));
+    opacity:0.16;
+    animation: spin 16s linear infinite;
+  }
+  @keyframes spin{ to{ transform: translate(-50%,-58%) rotate(360deg); } }
+
+  .balls{ position:relative; display:flex; gap:10px; z-index:1; }
+  .ball{
+    width: 54px; height:54px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:1.5rem;
+    font-family:"Baloo 2", sans-serif;
+    box-shadow: inset -5px -7px 0 rgba(0,0,0,0.16), 0 8px 18px rgba(0,0,0,0.4);
+    opacity:0; transform: translateY(-60px) scale(0.4) rotate(-30deg);
+    animation: ballDrop 0.7s cubic-bezier(.34,1.56,.64,1) forwards;
+  }
+  .ball:nth-child(1){ background:var(--pink); color:#3a0518; animation-delay:0.05s; }
+  .ball:nth-child(2){ background:var(--yellow); color:#402a02; animation-delay:0.18s; }
+  .ball:nth-child(3){ background:var(--teal); color:#022e28; animation-delay:0.31s; }
+  .ball:nth-child(4){ background:var(--blue); color:#04123a; animation-delay:0.44s; }
+  .ball:nth-child(5){ background:var(--violet); color:#230538; animation-delay:0.57s; }
+  @keyframes ballDrop{
+    0%{ opacity:0; transform: translateY(-60px) scale(0.4) rotate(-30deg); }
+    70%{ opacity:1; }
+    100%{ opacity:1; transform: translateY(0) scale(1) rotate(0deg); }
+  }
+
+  .tagline{
+    color: var(--text-dim);
+    font-size: 1rem;
+    max-width: 480px;
+    margin: 14px auto 0;
+    opacity:0;
+    animation: fadeUp 0.6s ease-out 0.9s forwards;
+  }
+  @keyframes fadeUp{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+
+  /* ---------- glass panels ---------- */
+  .panel{
+    background: var(--panel);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid var(--panel-border);
+    border-radius: 22px;
+    padding: 26px;
+    margin-bottom: 24px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    opacity:0;
+    animation: fadeUp 0.6s ease-out 0.3s forwards;
+  }
+
+  .panel h2{
+    font-size: 1.3rem;
+    margin: 0 0 4px;
+    background: linear-gradient(90deg, var(--yellow), var(--pink));
+    -webkit-background-clip: text;
+    background-clip:text;
+    color: transparent;
+    display:inline-block;
+  }
+  .panel .hint{ color: var(--text-dim); font-size:0.88rem; margin-bottom:16px; }
+
+  textarea{
+    width:100%; min-height:170px;
+    background: rgba(0,0,0,0.22);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    color: var(--text);
+    padding: 14px 16px;
+    font-family:"Inter", sans-serif;
+    font-size: 0.95rem;
+    line-height:1.6;
+    resize: vertical;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  textarea::placeholder{ color: #766a95; }
+  textarea:focus{ outline:none; border-color: var(--focus); box-shadow: 0 0 0 3px rgba(255,201,60,0.18); }
+
+  .row{ display:flex; flex-wrap:wrap; gap:16px; align-items:center; margin-top:16px; }
+
+  .field{ display:flex; flex-direction:column; gap:5px; font-size:0.85rem; color: var(--text-dim); }
+  select{
+    background: rgba(0,0,0,0.25);
+    color: var(--text);
+    border:1px solid var(--panel-border);
+    border-radius:10px;
+    padding: 9px 12px;
+    font-family:"Inter", sans-serif;
+    cursor:pointer;
+  }
+  select:focus-visible{ outline:2px solid var(--focus); }
+
+  label.checkline{
+    display:flex; align-items:center; gap:9px;
+    color: var(--text-dim); font-size:0.92rem; cursor:pointer;
+  }
+  input[type="checkbox"]{
+    width:18px; height:18px; accent-color: var(--pink); cursor:pointer;
+  }
+
+  button{
+    font-family:"Inter", sans-serif;
+    font-weight:700;
+    border:none;
+    border-radius: 12px;
+    padding: 12px 20px;
+    cursor:pointer;
+    font-size:0.92rem;
+    transition: transform 0.15s cubic-bezier(.34,1.56,.64,1), box-shadow 0.2s ease, filter 0.15s ease;
+    position:relative;
+  }
+  button:focus-visible{ outline:2px solid var(--focus); outline-offset:2px; }
+  button:active{ transform: translateY(1px) scale(0.98); }
+
+  .btn-primary{
+    background: linear-gradient(135deg, var(--pink), #ff6f61);
+    color:#fff;
+    box-shadow: 0 8px 20px rgba(255,61,129,0.35);
+  }
+  .btn-primary:hover{ transform: translateY(-2px); box-shadow: 0 12px 26px rgba(255,61,129,0.45); }
+
+  .btn-ghost{
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+    border:1px solid var(--panel-border);
+  }
+  .btn-ghost:hover{ border-color: var(--teal); background: rgba(0,224,192,0.08); transform: translateY(-2px); }
+
+  .btn-danger{
+    background: transparent;
+    color:#ff9fb5;
+    border:1px solid rgba(230,62,92,0.4);
+  }
+  .btn-danger:hover{ border-color: var(--stamp); background: rgba(230,62,92,0.1); }
+
+  #status-msg{ font-size:0.85rem; color:#ffb37a; min-height:1.3em; margin-top:10px; }
+
+  .share-box{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:16px; }
+  #share-url{
+    flex:1; min-width:220px;
+    background: rgba(0,0,0,0.25);
+    border:1px solid var(--panel-border);
+    color: var(--text-dim);
+    padding: 10px 13px;
+    border-radius:10px;
+    font-size:0.82rem;
+  }
+
+  /* ---------- game view ---------- */
+  .board-head{
+    display:flex; justify-content:space-between; align-items:center;
+    flex-wrap:wrap; gap:12px; margin-bottom:18px;
+  }
+  .board-head .title{
+    font-size:1.5rem;
+    background: linear-gradient(90deg, var(--teal), var(--blue));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .actions{ display:flex; gap:10px; flex-wrap:wrap; }
+
+  .banner{
+    text-align:center;
+    font-family:"Baloo 2", sans-serif;
+    font-size: 2.4rem;
+    min-height: 3rem;
+    margin: 4px 0 14px;
+    background: linear-gradient(90deg, var(--pink), var(--yellow), var(--teal));
+    background-size: 200% auto;
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .banner.show{ animation: bannerPop 0.5s cubic-bezier(.34,1.56,.64,1), gradientShift 2.5s linear infinite; }
+  @keyframes bannerPop{ from{ transform:scale(0.5); opacity:0; } to{ transform:scale(1); opacity:1; } }
+  @keyframes gradientShift{ to{ background-position: 200% center; } }
+
+  .col-letters{ display:grid; gap:10px; margin-bottom:8px; }
+  .col-letters span{
+    text-align:center; font-family:"Baloo 2", sans-serif; font-weight:700;
+    font-size: 1.5rem; color: var(--text);
+    text-shadow: 0 0 18px rgba(255,255,255,0.25);
+  }
+
+  .grid{
+    display:grid; gap:10px;
+    background: linear-gradient(160deg, #fffdf8, var(--paper));
+    padding: 16px;
+    border-radius: 18px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06);
+  }
+
+  .cell{
+    position:relative;
+    background:#fffefb;
+    border: 1px solid #e4d9bd;
+    border-radius: 12px;
+    min-height: 94px;
+    display:flex; align-items:center; justify-content:center;
+    text-align:center; padding: 8px 6px;
+    font-size: 0.83rem; line-height:1.28;
+    color: var(--ink);
+    cursor:pointer; user-select:none; overflow:hidden;
+    opacity:0; transform: perspective(600px) rotateX(-90deg);
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+  }
+  .cell.deal-in{ animation: dealIn 0.5s cubic-bezier(.34,1.56,.64,1) forwards; }
+  @keyframes dealIn{ to{ opacity:1; transform: perspective(600px) rotateX(0deg); } }
+
+  .cell:hover{ background:#fff7e3; box-shadow: 0 6px 16px rgba(0,0,0,0.12); transform: translateY(-2px); }
+  .cell:focus-visible{ outline: 3px solid var(--blue); outline-offset:-3px; }
+
+  .cell.free{
+    background: linear-gradient(135deg,#fff2cf,#ffe6b0);
+    font-family:"Baloo 2", sans-serif; font-weight:700;
+    color:#8a5a0a; font-size:1rem;
+  }
+
+  .cell .stamp{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    pointer-events:none; opacity:0;
+    transform: scale(0.5) rotate(-8deg);
+  }
+  .cell.marked .stamp{ opacity:0.9; animation: stampIn 0.3s cubic-bezier(.34,1.56,.64,1) forwards; }
+  @keyframes stampIn{
+    0%{ opacity:0; transform: scale(2) rotate(-20deg); }
+    60%{ opacity:1; transform: scale(0.82) rotate(-8deg); }
+    100%{ opacity:0.9; transform: scale(1) rotate(-10deg); }
+  }
+  .cell.marked span.txt{ opacity:0.32; }
+  .stamp svg{ width:78%; height:78%; }
+
+  .grid.win .cell.win-line{
+    background: linear-gradient(135deg,#fff2cf,#ffd7ec);
+    box-shadow: 0 0 0 2px var(--pink) inset;
+    animation: winPulse 1.1s ease-in-out infinite;
+  }
+  @keyframes winPulse{ 0%,100%{ filter:brightness(1);} 50%{ filter:brightness(1.08);} }
+
+  /* confetti */
+  .confetti-piece{
+    position:fixed; top:0; left:0;
+    width:8px; height:12px;
+    pointer-events:none; z-index:50;
+    border-radius:2px;
+    will-change: transform, opacity;
+  }
+
+  footer{
+    text-align:center; color: var(--text-dim);
+    font-size:0.78rem; margin-top:34px; opacity:0.8;
+  }
+
+  #setup-view.hidden, #game-view.hidden{ display:none; }
+
+  @media (max-width:560px){
+    .drum{ width:230px; }
+    .drum::before{ width:230px; height:230px; }
+    .ball{ width:42px; height:42px; font-size:1.1rem; }
+    .cell{ min-height:76px; font-size:0.72rem; }
+    .col-letters span{ font-size:1.1rem; }
+    .banner{ font-size:1.7rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.001s !important; animation-iteration-count:1 !important; transition-duration:0.001s !important; }
+    .float-ball, .drum::before{ animation: none !important; opacity:0.08; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-scene" id="bg-scene"></div>
+
+<div class="wrap">
+
+  <header class="hero">
+    <div class="drum">
+      <div class="balls">
+        <div class="ball">B</div>
+        <div class="ball">I</div>
+        <div class="ball">N</div>
+        <div class="ball">G</div>
+        <div class="ball">O</div>
+      </div>
+    </div>
+    <div class="tagline">Wpisz własne hasła, wygeneruj karty i graj ze znajomymi — każdy dostaje inny losowy układ.</div>
+  </header>
+
+  <!-- WIDOK USTAWIEŃ -->
+  <section id="setup-view" class="panel">
+    <h2>Twoje hasła</h2>
+    <div class="hint">Jedno hasło w jednej linii. Im więcej wpiszesz, tym bardziej losowa będzie każda karta.</div>
+    <textarea id="phrases-input" placeholder="np.
+Ktoś mówi 'no dobra, ostatnia gra'
+Ktoś się spóźnia
+Pada pytanie 'a kto to wygrywa?'
+Ktoś przypala jedzenie
+..."></textarea>
+
+    <div class="row">
+      <div class="field">
+        <label for="size-select">Rozmiar karty</label>
+        <select id="size-select">
+          <option value="3">3 × 3</option>
+          <option value="4">4 × 4</option>
+          <option value="5" selected>5 × 5 (klasyczne BINGO)</option>
+        </select>
+      </div>
+      <label class="checkline">
+        <input type="checkbox" id="free-space" checked>
+        Wolne pole na środku
+      </label>
+    </div>
+
+    <div id="status-msg"></div>
+
+    <div class="row">
+      <button class="btn-primary" id="generate-btn">Generuj moją kartę</button>
+      <button class="btn-ghost" id="share-btn">Utwórz link dla znajomych</button>
+    </div>
+
+    <div class="share-box" id="share-box" style="display:none;">
+      <input id="share-url" readonly>
+      <button class="btn-ghost" id="copy-btn">Kopiuj</button>
+    </div>
+  </section>
+
+  <!-- WIDOK GRY -->
+  <section id="game-view" class="hidden">
+    <div class="board-head">
+      <div class="title display">Twoja karta</div>
+      <div class="actions">
+        <button class="btn-ghost" id="reshuffle-btn">Nowa karta</button>
+        <button class="btn-ghost" id="clear-btn">Wyczyść</button>
+        <button class="btn-danger" id="edit-btn">Edytuj hasła</button>
+      </div>
+    </div>
+
+    <div class="banner" id="win-banner"></div>
+
+    <div class="col-letters" id="col-letters"></div>
+    <div class="grid" id="bingo-grid"></div>
+  </section>
+
+  <footer>Dane hasła zapisują się tylko w Twojej przeglądarce (localStorage). Link do udostępnienia zawiera listę haseł zakodowaną w adresie — każda osoba, która go otworzy, dostaje własną losową kartę.</footer>
+</div>
+
+<script>
+(function(){
+  const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- floating background balls ---------- */
+  const bgScene = document.getElementById("bg-scene");
+  const bgColors = ["#ff3d81","#ffc93c","#00e0c0","#5c7cfa","#a06be0"];
+  if(!reduceMotion){
+    for(let i=0;i<9;i++){
+      const b = document.createElement("div");
+      b.className = "float-ball";
+      const size = 40 + Math.random()*90;
+      b.style.width = size+"px";
+      b.style.height = size+"px";
+      b.style.left = Math.random()*100+"%";
+      b.style.top = Math.random()*100+"%";
+      b.style.background = bgColors[i % bgColors.length];
+      b.style.animationDuration = (16 + Math.random()*14)+"s";
+      b.style.animationDelay = (-Math.random()*10)+"s";
+      bgScene.appendChild(b);
+    }
+  }
+
+  const STORAGE_KEY = "bingo-party-phrases-v1";
+  const SIZE_KEY = "bingo-party-size-v1";
+  const FREE_KEY = "bingo-party-free-v1";
+
+  const setupView = document.getElementById("setup-view");
+  const gameView = document.getElementById("game-view");
+  const phrasesInput = document.getElementById("phrases-input");
+  const sizeSelect = document.getElementById("size-select");
+  const freeSpaceCb = document.getElementById("free-space");
+  const statusMsg = document.getElementById("status-msg");
+  const generateBtn = document.getElementById("generate-btn");
+  const shareBtn = document.getElementById("share-btn");
+  const shareBox = document.getElementById("share-box");
+  const shareUrl = document.getElementById("share-url");
+  const copyBtn = document.getElementById("copy-btn");
+  const grid = document.getElementById("bingo-grid");
+  const colLetters = document.getElementById("col-letters");
+  const winBanner = document.getElementById("win-banner");
+  const reshuffleBtn = document.getElementById("reshuffle-btn");
+  const clearBtn = document.getElementById("clear-btn");
+  const editBtn = document.getElementById("edit-btn");
+
+  let currentPhrases = [];
+  let currentSize = 5;
+  let currentFree = true;
+  let cardWords = [];
+  let marked = [];
+  let hasWon = false;
+
+  function b64EncodeUnicode(str){
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+      function(_, p1){ return String.fromCharCode('0x' + p1); }));
+  }
+  function b64DecodeUnicode(str){
+    return decodeURIComponent(Array.prototype.map.call(atob(str),
+      function(c){ return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2); }).join(''));
+  }
+
+  function getPhrasesFromTextarea(){
+    return phrasesInput.value.split("\n").map(s => s.trim()).filter(s => s.length > 0);
+  }
+
+  function neededCount(size, free){
+    const total = size * size;
+    return free && size % 2 === 1 ? total - 1 : total;
+  }
+
+  function shuffle(arr){
+    const a = arr.slice();
+    for(let i = a.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function stampSVG(){
+    return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <g fill="none" stroke="var(--stamp)" stroke-width="7" stroke-linecap="round">
+        <path d="M12 55 C 20 20, 45 8, 55 10 C 78 15, 90 35, 86 52 C 82 70, 62 88, 45 85 C 25 81, 8 68, 12 55 Z" stroke-dasharray="4 3"/>
+        <line x1="22" y1="45" x2="78" y2="58" stroke-width="9"/>
+        <line x1="28" y1="65" x2="72" y2="38" stroke-width="9"/>
+      </g>
+    </svg>`;
+  }
+
+  /* ---------- confetti ---------- */
+  function burstConfetti(x, y, count){
+    if(reduceMotion) return;
+    const colors = [bgColors[0], bgColors[1], bgColors[2], bgColors[3], bgColors[4]];
+    for(let i = 0; i < count; i++){
+      const p = document.createElement("div");
+      p.className = "confetti-piece";
+      p.style.left = x + "px";
+      p.style.top = y + "px";
+      p.style.background = colors[Math.floor(Math.random()*colors.length)];
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 60 + Math.random() * 90;
+      const dx = Math.cos(angle) * dist;
+      const dy = Math.sin(angle) * dist - 40;
+      const rot = (Math.random() * 720 - 360);
+      const dur = 700 + Math.random()*500;
+      document.body.appendChild(p);
+      const anim = p.animate([
+        { transform: `translate(0,0) rotate(0deg)`, opacity: 1 },
+        { transform: `translate(${dx}px, ${dy + 160}px) rotate(${rot}deg)`, opacity: 0 }
+      ], { duration: dur, easing: "cubic-bezier(.25,.46,.45,.94)" });
+      anim.onfinish = () => p.remove();
+    }
+  }
+
+  function confettiRain(){
+    if(reduceMotion) return;
+    const colors = [bgColors[0], bgColors[1], bgColors[2], bgColors[3], bgColors[4]];
+    const w = window.innerWidth;
+    for(let i = 0; i < 60; i++){
+      setTimeout(() => {
+        const p = document.createElement("div");
+        p.className = "confetti-piece";
+        const startX = Math.random() * w;
+        p.style.left = startX + "px";
+        p.style.top = "-20px";
+        p.style.background = colors[Math.floor(Math.random()*colors.length)];
+        p.style.width = (6 + Math.random()*6) + "px";
+        p.style.height = (10 + Math.random()*8) + "px";
+        document.body.appendChild(p);
+        const drift = (Math.random()*160 - 80);
+        const rot = Math.random()*720 - 360;
+        const dur = 2200 + Math.random()*1400;
+        const anim = p.animate([
+          { transform: `translate(0,0) rotate(0deg)`, opacity:1 },
+          { transform: `translate(${drift}px, ${window.innerHeight + 40}px) rotate(${rot}deg)`, opacity: 0.9 }
+        ], { duration: dur, easing: "ease-in" });
+        anim.onfinish = () => p.remove();
+      }, i * 25);
+    }
+  }
+
+  function buildCard(size, free){
+    const need = neededCount(size, free);
+    let pool = currentPhrases;
+    if(pool.length < need){
+      const times = Math.ceil(need / pool.length);
+      pool = Array(times).fill(currentPhrases).flat();
+    }
+    const chosen = shuffle(pool).slice(0, need);
+    const cells = [];
+    let idx = 0;
+    const centerIndex = free ? Math.floor((size*size)/2) : -1;
+    for(let i = 0; i < size*size; i++){
+      if(i === centerIndex && size % 2 === 1){
+        cells.push({ text: "DARMOWE", isFree: true });
+      } else {
+        cells.push({ text: chosen[idx], isFree: false });
+        idx++;
+      }
+    }
+    return cells;
+  }
+
+  function renderLetters(size){
+    colLetters.innerHTML = "";
+    colLetters.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+    if(size === 5){
+      "BINGO".split("").forEach(l => {
+        const span = document.createElement("span");
+        span.textContent = l;
+        colLetters.appendChild(span);
+      });
+      colLetters.style.display = "grid";
+    } else {
+      colLetters.style.display = "none";
+    }
+  }
+
+  function renderCard(){
+    grid.innerHTML = "";
+    grid.classList.remove("win");
+    grid.style.gridTemplateColumns = `repeat(${currentSize}, 1fr)`;
+    marked = cardWords.map(w => !!w.isFree);
+    hasWon = false;
+
+    cardWords.forEach((word, i) => {
+      const cell = document.createElement("div");
+      cell.className = "cell" + (word.isFree ? " free" : "") + (marked[i] ? " marked" : "");
+      cell.tabIndex = 0;
+      cell.setAttribute("role", "button");
+      cell.setAttribute("aria-pressed", marked[i] ? "true" : "false");
+
+      const txt = document.createElement("span");
+      txt.className = "txt";
+      txt.textContent = word.text;
+      cell.appendChild(txt);
+
+      const stamp = document.createElement("div");
+      stamp.className = "stamp";
+      stamp.innerHTML = stampSVG();
+      cell.appendChild(stamp);
+
+      if(!word.isFree){
+        cell.addEventListener("click", () => toggleCell(i, cell));
+        cell.addEventListener("keydown", (e) => {
+          if(e.key === "Enter" || e.key === " "){
+            e.preventDefault();
+            toggleCell(i, cell);
+          }
+        });
+      }
+      grid.appendChild(cell);
+
+      if(!reduceMotion){
+        cell.style.animationDelay = (i * 0.035) + "s";
+        requestAnimationFrame(() => cell.classList.add("deal-in"));
+      } else {
+        cell.style.opacity = 1;
+        cell.style.transform = "none";
+      }
+    });
+
+    winBanner.textContent = "";
+    winBanner.classList.remove("show");
+    checkWin();
+  }
+
+  function toggleCell(i, cellEl){
+    marked[i] = !marked[i];
+    cellEl.classList.toggle("marked", marked[i]);
+    cellEl.setAttribute("aria-pressed", marked[i] ? "true" : "false");
+    if(marked[i]){
+      const rect = cellEl.getBoundingClientRect();
+      burstConfetti(rect.left + rect.width/2, rect.top + rect.height/2, 14);
+    }
+    checkWin();
+  }
+
+  function checkWin(){
+    const size = currentSize;
+    const lines = [];
+    for(let r = 0; r < size; r++) lines.push(Array.from({length:size}, (_, c) => r*size + c));
+    for(let c = 0; c < size; c++) lines.push(Array.from({length:size}, (_, r) => r*size + c));
+    lines.push(Array.from({length:size}, (_, k) => k*size + k));
+    lines.push(Array.from({length:size}, (_, k) => k*size + (size-1-k)));
+
+    document.querySelectorAll(".cell.win-line").forEach(c => c.classList.remove("win-line"));
+
+    const winningLine = lines.find(line => line.every(idx => marked[idx]));
+    if(winningLine){
+      grid.classList.add("win");
+      winningLine.forEach(idx => grid.children[idx].classList.add("win-line"));
+      winBanner.textContent = "🎉 BINGO! 🎉";
+      winBanner.classList.add("show");
+      if(!hasWon){
+        hasWon = true;
+        confettiRain();
+      }
+    } else {
+      grid.classList.remove("win");
+      winBanner.textContent = "";
+      winBanner.classList.remove("show");
+      hasWon = false;
+    }
+  }
+
+  function showGame(){ setupView.classList.add("hidden"); gameView.classList.remove("hidden"); }
+  function showSetup(){ gameView.classList.add("hidden"); setupView.classList.remove("hidden"); }
+
+  function validateAndPrepare(){
+    const phrases = getPhrasesFromTextarea();
+    const size = parseInt(sizeSelect.value, 10);
+    const free = freeSpaceCb.checked;
+    const need = neededCount(size, free);
+
+    statusMsg.textContent = "";
+    if(phrases.length === 0){
+      statusMsg.textContent = "Wpisz przynajmniej kilka haseł, żeby wygenerować kartę.";
+      return null;
+    }
+    if(phrases.length < need){
+      statusMsg.textContent = `Masz ${phrases.length} haseł, a karta potrzebuje ${need}. Niektóre hasła powtórzą się na karcie — dodaj więcej, żeby tego uniknąć.`;
+    }
+    currentPhrases = phrases;
+    currentSize = size;
+    currentFree = free;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(phrases));
+    localStorage.setItem(SIZE_KEY, String(size));
+    localStorage.setItem(FREE_KEY, free ? "1" : "0");
+    return { phrases, size, free };
+  }
+
+  generateBtn.addEventListener("click", () => {
+    const prep = validateAndPrepare();
+    if(!prep) return;
+    renderLetters(currentSize);
+    cardWords = buildCard(currentSize, currentFree);
+    renderCard();
+    showGame();
+  });
+
+  reshuffleBtn.addEventListener("click", () => {
+    cardWords = buildCard(currentSize, currentFree);
+    renderCard();
+  });
+
+  clearBtn.addEventListener("click", () => {
+    marked = cardWords.map(w => !!w.isFree);
+    hasWon = false;
+    document.querySelectorAll(".cell").forEach((cellEl, i) => {
+      cellEl.classList.toggle("marked", marked[i]);
+      cellEl.setAttribute("aria-pressed", marked[i] ? "true" : "false");
+    });
+    checkWin();
+  });
+
+  editBtn.addEventListener("click", showSetup);
+
+  shareBtn.addEventListener("click", () => {
+    const prep = validateAndPrepare();
+    if(!prep) return;
+    const payload = JSON.stringify({ p: prep.phrases, s: prep.size, f: prep.free ? 1 : 0 });
+    const encoded = b64EncodeUnicode(payload);
+    const url = `${location.origin}${location.pathname}#data=${encoded}`;
+    shareUrl.value = url;
+    shareBox.style.display = "flex";
+  });
+
+  copyBtn.addEventListener("click", async () => {
+    shareUrl.select();
+    try{
+      await navigator.clipboard.writeText(shareUrl.value);
+      copyBtn.textContent = "Skopiowano!";
+      setTimeout(() => copyBtn.textContent = "Kopiuj", 1500);
+    }catch(e){}
+  });
+
+  function loadFromHash(){
+    const hash = location.hash;
+    const m = hash.match(/data=([^&]+)/);
+    if(!m) return false;
+    try{
+      const decoded = b64DecodeUnicode(decodeURIComponent(m[1]));
+      const data = JSON.parse(decoded);
+      if(Array.isArray(data.p) && data.p.length){
+        phrasesInput.value = data.p.join("\n");
+        sizeSelect.value = String(data.s || 5);
+        freeSpaceCb.checked = !!data.f;
+        return true;
+      }
+    }catch(e){ return false; }
+    return false;
+  }
+
+  function loadFromStorage(){
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if(saved){
+      try{
+        const arr = JSON.parse(saved);
+        if(Array.isArray(arr)) phrasesInput.value = arr.join("\n");
+      }catch(e){}
+    }
+    const savedSize = localStorage.getItem(SIZE_KEY);
+    if(savedSize) sizeSelect.value = savedSize;
+    const savedFree = localStorage.getItem(FREE_KEY);
+    if(savedFree !== null) freeSpaceCb.checked = savedFree === "1";
+  }
+
+  const hadShared = loadFromHash();
+  if(!hadShared) loadFromStorage();
+
+  if(hadShared){
+    const prep = validateAndPrepare();
+    if(prep){
+      renderLetters(currentSize);
+      cardWords = buildCard(currentSize, currentFree);
+      renderCard();
+      showGame();
+    }
+  }
+})();
+</script>
+</body>
+</html>
